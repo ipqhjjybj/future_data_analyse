@@ -1,10 +1,11 @@
 # encoding: UTF-8
 
 """
-本模块中主要包含：
-1. 从通联数据下载历史行情的引擎
-2. 用来把MultiCharts导出的历史数据载入到MongoDB中用的函数
-3. 增加从通达信导出的历史数据载入到MongoDB中的函数
+@author ipqhjjybj
+
+mongodb 连接代码
+用于进行价差的分析
+
 """
 
 
@@ -70,7 +71,7 @@ class MongoClient():
 			minus_close = data_c1[t_date]["close"] - data_c2[t_date]["close"]
 			arr_1.append( (t_date , data_c1[t_date]["close"]))
 			arr_2.append( (t_date , data_c2[t_date]["close"]))
-			arr.append( (t_date , minus_close + 3000))
+			arr.append( (t_date , minus_close ))
 		return arr , arr_1 , arr_2
 
 if __name__ == '__main__':
