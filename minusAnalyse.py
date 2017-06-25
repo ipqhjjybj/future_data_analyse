@@ -8,7 +8,7 @@ from MongodbClient import *
 '''
 对两个品种做差并画图
 '''
-def test1( database_name = "VnTrader_1Min_Db" , symbol1 = "hc1710" , symbol2 = "rb1710" , start_date = '2017-03-01' ,end_date = '2017-06-24', show_compare = True):
+def test1( database_name = "VnTrader_1Min_Db" , symbol1 = "hc1710" , symbol2 = "rb1710" , start_date = '2017-03-01' ,end_date = '2017-04-24', show_compare = True):
 	mgclient = MongoClient.getMongoInstance()
 	
 	(data, data_c1 , data_c2)  = MongoClient.getMinusData(database_name, symbol1, symbol2, start_date, end_date)

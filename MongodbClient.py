@@ -54,6 +54,20 @@ class MongoClient():
 			key = datetime.strptime(key , '%Y%m%d %H:%M:%S')
 			dic[key] = c
 		return dic
+
+	'''
+	获得某一个品种的某段收盘价
+	'''
+	@staticmethod
+	def getBetweenClose(db_name,table_name, start_date, end_date):
+		data = MongoClient.getBetweenData(db_name,table_name,start_date,end_date)
+		date_arr = data.keys()
+		date_arr.sort()
+		arr  = []
+		for t_date in date_arr:
+			arr.append( (t_date , data[t_date]["close"]))
+		return arr
+
 	'''
 	获得 相减数据
 	'''
