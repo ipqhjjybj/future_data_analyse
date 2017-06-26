@@ -1,0 +1,492 @@
+//------------------------------------------------------------------------
+// 简称: Eyuxian_huice
+// 名称: 鳄鱼线回测
+// 类别: 公式应用
+// 类型: 用户应用
+// 输出:
+//------------------------------------------------------------------------
+
+Params
+    //交易参数
+	Numeric bzjl(0.09);//保证金比例
+	Numeric chengshu(10);//乘数
+	
+    //鳄鱼线指标参数
+    Numeric  CF(5);//唇线周期
+    Numeric  CM(8);//齿线周期
+    Numeric  CS(13);//鄂线周期
+    Numeric  d_CF(3);//唇线平移
+    Numeric  d_CM(5);//齿线平移
+    Numeric  d_CS(8);//鄂线平移
+	
+	//下单参数
+	Numeric  cszj(1000000);//初始资金
+	Numeric  ganggan(1);//使用杠杆
+	Numeric  bili(0.25);//资金分配比例
+	//Numeric  lots(25);//单次开仓成交量
+	Numeric  lots_max(20);//单次下单最大量
+	Numeric  vol_max(25);//最大持仓量
+	Numeric  cs_max(20);//最多重复下单直至成功的次数
+	//Numeric  cutofftime(145500);//下午结束时间
+	
+	//箱体参数
+	//Numeric  N(23);
+	//Numeric  xianglv(1);
+	
+	//止损参数
+	Numeric  zhisunl_duo1(2);//多仓止损率
+	Numeric  zhisunl_kong1(2);//空仓止损率
+	
+	//波动参数
+	Numeric  std_up(2);
+	Numeric  std_low(2);
+	Numeric  length(15);
+	
+	Numeric  dd(10);
+	
+Vars
+    //鳄鱼线变量
+	NumericSeries  lips(0);//唇线
+	NumericSeries  teeth(0);//齿线
+	NumericSeries  croco(0);//鄂线
+	NumericSeries  lips_N(0);//平移前唇线
+	NumericSeries  teeth_N(0);//平移前齿线
+	NumericSeries  croco_N(0);//平移前鄂线
+	NumericSeries  zui(0);//嘴张开情况，默认为闭上
+	
+	//箱体变量
+	NumericSeries  xianghigh(100000000);//箱体上界
+	NumericSeries  xianglow(-10000000);//箱体下界
+	NumericSeries  xiang(0);//箱体情况，默认在箱体内
+	NumericSeries  xianghigh1(0);
+	NumericSeries  xianglow1(0);
+	
+	//止损变量
+	NumericSeries  zhisun_duo(-10000000);//多仓止损价
+	NumericSeries  zhisun_kong(100000000);//空仓止损价
+	//止损参数
+	NumericSeries  zhisunl_duo(0.02);//多仓止损率
+	NumericSeries  zhisunl_kong(0.02);//空仓止损率
+	
+	//交易变量
+	Numeric  lots(1);//单次开仓成交量
+	Numeric  bzj(0);//保证金
+	NumericSeries  sign1(0);//资金限制能否开仓，默认不开仓
+	NumericSeries  sign2(1);//最大持仓限制能否开仓，默认不开仓
+	NumericSeries  kdc_num(0);//开多仓次数
+	NumericSeries  kkc_num(0);//开空仓次数
+	Numeric  duopos(0);
+	Numeric  kongpos(0);
+	Numeric  kdc_num1(0);
+	Numeric  kkc_num1(0);
+	Numeric  dongzuo(2);
+	Numeric  fangxiang(2);
+	
+	
+	Bool  flag_bk(false);
+	Bool  flag_sk(false);
+	Bool  flag_bp(false);
+	Bool  flag_sp(false);
+	Bool  flag_zd(false);
+	Bool  flag_zk(false);
+	Bool  flag_sjsp(false);
+	Bool  flag_sjbp(false);
+	
+	//交易时间参数
+	Numeric  cutoff_time(0);//日盘结束时间
+	Numeric  begin_time(0);//夜盘开始交易时间
+	
+	Numeric m_interval;//周期
+	
+	
+	//波动线
+	NumericSeries  evalue(0);
+	NumericSeries  bodong_up(0);
+	NumericSeries  bodong_low(0);
+	NumericSeries  std_value(0);
+	
+	//成交价
+	NumericSeries  chengjiaojia_duo(0);//多仓成交价
+	NumericSeries  chengjiaojia_kong(0);//空仓成交价
+	
+	//资金
+	NumericSeries  kyzj(0);//可用资金
+	
+	
+Begin
+	//时间参数
+	begin_time=210000/1000000;
+	if (BarInterval==5);
+	{
+		cutoff_time=145250/1000000;
+	}
+	if (BarInterval==15);
+	{
+		cutoff_time=144250/1000000;
+	}
+	
+	//周期
+	 if (BarType()==1)//分钟线
+	{
+		m_interval=BarInterval()*100/1000000;
+	}
+	else if (BarType()==2)//秒线
+	{
+		m_interval=BarInterval/1000000;
+	}
+	if (BarStatus==0)
+	//if (Time==90000/1000000)
+	{
+		SetGlobalVar(1,0);//多仓开仓次数
+		SetGlobalVar(2,0);//空仓开仓次数
+		SetGlobalVar(5,0);//多仓成交价
+		SetGlobalVar(6,0);//空仓成交价
+	}
+	
+
+	//止损率
+	zhisunl_duo=zhisunl_duo1/100;
+	zhisunl_kong=zhisunl_kong1/100;
+	 
+	
+	 
+	 //鳄鱼线指标
+	lips_N=XAverage(Close,CF);
+	teeth_N=XAverage(Close,CM);
+	croco_N=XAverage(Close,CS);
+	lips=lips_N[d_CF];
+	teeth=teeth_N[d_CM];
+	croco=croco_N[d_CS];
+	PlotNumeric("lips",lips,lips,Green);
+	Unplot("lips1",1);
+	PlotString("lips1",Text(Floor(lips,0.1)),lips,green);
+	PlotNumeric("teeth",teeth,teeth,Red);
+	PlotNumeric("croco",croco,croco,Blue);
+	
+	//鳄鱼线嘴张开情况
+	if (lips>teeth and teeth>croco)
+	{
+		zui=1;//嘴向上张开，多头市场
+	}
+	else if (lips<teeth and teeth<croco)
+	{
+		zui=-1;//嘴向下张开，空头市场
+	}
+	else
+	{
+		zui=0;//嘴闭上
+	}
+	
+	
+	
+	//持仓情况
+	if (MarketPosition()==1){
+		duopos=CurrentContracts();
+	}
+	else{
+		duopos=0;
+	}
+	if (MarketPosition()==-1){
+		kongpos=-1*CurrentContracts();
+	}else{
+		kongpos=0;
+	}
+	
+	
+	//箱体
+	//波动
+	evalue=Average((open[1]+close[1])/2,length);
+	std_value=std_function((open[1]+close[1])/2,evalue,length);
+	bodong_up=close[1]+std_up*std_value;
+	bodong_low=close[1]-std_low*std_value;
+	if (duopos<1){
+		PlotNumeric("bodong_up",bodong_up,bodong_up,white);
+		PlotString("bodong_up1",Text(Floor(bodong_up,0.1)),bodong_up,white);
+		Unplot("bodong_up1",1);
+	}
+	if (kongpos<1){
+		PlotNumeric("bodong_low",bodong_low,bodong_low,white);
+		PlotString("bodong_low1",Text(Floor(bodong_low,0.1)),bodong_low,white);
+		Unplot("bodong_low1",1);
+	}
+    if (close>bodong_up ){
+		xiang=1;//在箱体外，可以交易多头
+	}else if (close<bodong_low){
+		xiang=-1;//在箱体外，可以交易空头
+	}else{
+		xiang=0;//在箱体内，不可以交易
+	}
+	
+	//交易手数
+	/**
+	if (duopos>0 or kongpos>0){
+		kyzj=0;
+	}
+	else{
+		kyzj=cszj*bili;
+	}
+	lots=IntPart(kyzj/(Open*chengshu*bzjl));
+	**/
+	lots=1;
+	
+	
+
+	//止损
+	if (duopos==0 ){
+        zhisun_duo=Low()-1;
+	}else if (duopos>0 ){
+		zhisun_duo=(1-zhisunl_duo)*AvgEntryPrice();
+	}
+	if (kongpos==0){
+		zhisun_kong=High()+1;
+	}else if (kongpos>0){
+		zhisun_kong=(1+zhisunl_kong)*AvgEntryPrice();
+	}
+	PlotNumeric("zhisun_duo", zhisun_duo, zhisun_duo,yellow);
+	Unplot("zhisun_duo1",1);
+	PlotString("zhisun_duo1",Text(Floor(zhisun_duo,0.1)),zhisun_duo,yellow);
+	
+	PlotNumeric(" zhisun_kong", zhisun_kong, zhisun_kong,yellow);
+	Unplot("zhisun_kong1",1);
+	PlotString("zhisun_kong1",Text(Floor(zhisun_kong,0.1)),zhisun_kong,yellow);
+	
+	
+	
+	
+	//出场
+	//交易时间结束
+	if(Time()>cutoff_time and Time()<begin_time){
+		if (duopos>0){
+			PlotString("order_sign3","SJSP",high(),yellow);
+			Sell(duopos,Open);
+			PlotBool("sjsp",flag_sjsp,High()+2);
+			SetGlobalVar(1,0);
+		}
+		if (kongpos>0){
+			PlotString("order_sign4","SJBP",Low(),white);
+			BuyToCover(kongpos,Open);
+			PlotBool("sjbp",flag_sjbp,Low()-2);
+			SetGlobalVar(2,0);
+		}
+	}
+	
+	
+	//平多仓
+	if  ( ( Low[1]<lips[1]  )){
+		//PlotString("order_sign3","SP",high(),yellow);
+		//Sell(duopos,Open);
+		SetGlobalVar(1,0);
+	}
+	if (duopos>0 and Open<lips){
+		PlotString("order_sign3","SP",high(),yellow);
+		Sell(duopos,Open);
+	}
+	if (duopos>0 and Open>lips and Low<lips){
+		PlotString("order_sign3","SP",high(),yellow);
+		Sell(duopos,lips);
+	}
+	
+	//平空仓
+	if  ((High[1]>lips[1] ) ){
+		SetGlobalVar(2,0);
+    }
+	if (kongpos>0 and open>lips){
+		PlotString("order_sign4","BP",Low(),white);
+		BuyToCover(kongpos,Open);
+	}
+	if (kongpos>0 and open<lips and high>lips){
+		PlotString("order_sign4","BP",Low(),white);
+		BuyToCover(kongpos,lips);
+	}
+	 
+	//多仓止损
+	if (( Low[1]<zhisun_duo[1] )){
+		SetGlobalVar(1,0);
+	}
+	if (duopos>0 and( Low<zhisun_duo) and Open>zhisun_duo){
+		PlotString("order_sign5","ZD",high(),yellow);
+		Sell(duopos,zhisun_duo);
+		SetGlobalVar(1,0);
+	}
+	if (duopos>0 and Open<zhisun_duo){
+		PlotString("order_sign5","ZD",high(),yellow);
+		Sell(duopos,Open);
+		SetGlobalVar(1,0);
+	}
+	
+	//空仓止损
+	if  (( High[1]>zhisun_kong[1] )){
+		SetGlobalVar(2,0);
+	} 
+	if (kongpos>0 and( High>zhisun_kong ) and open <zhisun_kong){
+		PlotString("order_sign5","ZK",Low(),white);
+		BuyToCover(kongpos,zhisun_kong);
+		SetGlobalVar(2,0);
+	}
+	if (kongpos>0 and open > zhisun_kong) {
+		PlotString("order_sign5","ZK",Low(),white);
+		BuyToCover(kongpos,open);
+		SetGlobalVar(2,0);
+	}
+
+	
+
+	
+	//进场
+	//开多仓
+	kdc_num1=GetGlobalVar(1);
+	PlotString("kdc1",Text(kdc_num1),High()+0.2,yellow);
+	if  ( xiang[1]==1 and zui[1]==1 and (Time()<cutoff_time or Time()>begin_time)  and  Close[1]>Open[1] and Low[1]>lips[1] and kdc_num1<1  and Open>lips){
+		PlotString("order_sign1","BK",High(),yellow);
+		Buy(lots,Open);
+		kdc_num1=kdc_num1+1;
+		SetGlobalVar(1,kdc_num1);
+		PlotString("kdc2",Text(kdc_num1),High()+0.1,yellow);
+	}
+	
+	
+	
+	//开空仓
+	kkc_num1=GetGlobalVar(2);
+	PlotString("kkc1",Text(kkc_num1),Low()-0.2,white);
+	if  (  xiang[1]==-1 and zui[1]==-1 and (Time()<cutoff_time or Time()>begin_time)  and  Close[1]<Open[1] and High[1]<lips[1] and kkc_num1<1  and Open<lips ){
+		PlotString("order_sign2","SK",Low(),white);
+		SellShort(lots,open);
+		kkc_num1=kkc_num1+1;
+		SetGlobalVar(2,kkc_num1);
+		PlotString("kkc2",Text(kkc_num1),Low()-0.1,white);
+	}
+	
+	
+	//持仓情况
+	if (MarketPosition()==1){
+		duopos=CurrentContracts();
+	}
+	else{
+		duopos=0;
+	}
+	if (MarketPosition()==-1){
+		kongpos=-1*CurrentContracts();
+	}else{
+		kongpos=0;
+	}
+	
+	//止损
+	if (duopos==0 ){
+        zhisun_duo=Low()-1;
+	}else if (duopos>0 ){
+		zhisun_duo=(1-zhisunl_duo)*AvgEntryPrice();
+	}
+	if (kongpos==0){
+		zhisun_kong=High()+1;
+	}else if (kongpos>0){
+		zhisun_kong=(1+zhisunl_kong)*AvgEntryPrice();
+	}
+	PlotNumeric("zhisun_duo", zhisun_duo, zhisun_duo,yellow);
+	Unplot("zhisun_duo1",1);
+	PlotString("zhisun_duo1",Text(Floor(zhisun_duo,0.1)),zhisun_duo,yellow);
+	
+	PlotNumeric(" zhisun_kong", zhisun_kong, zhisun_kong,yellow);
+	Unplot("zhisun_kong1",1);
+	PlotString("zhisun_kong1",Text(Floor(zhisun_kong,0.1)),zhisun_kong,yellow);
+	
+	 //多仓止损
+	if (( Low[1]<zhisun_duo[1] )){
+		SetGlobalVar(1,0);
+	}
+	if (duopos>0 and( Low<zhisun_duo) and Open>zhisun_duo){
+		PlotString("order_sign5","ZD",high(),yellow);
+		Sell(duopos,zhisun_duo);
+	}
+	if (duopos>0 and Open<zhisun_duo){
+		PlotString("order_sign5","ZD",high(),yellow);
+		Sell(duopos,Open);
+	}
+	
+	//空仓止损
+	if  (( High[1]>zhisun_kong[1] )){
+		SetGlobalVar(2,0);
+	} 
+	if (kongpos>0 and( High>zhisun_kong ) and open <zhisun_kong){
+		PlotString("order_sign5","ZK",Low(),white);
+		BuyToCover(kongpos,zhisun_kong);
+	}
+	if (kongpos>0 and open > zhisun_kong){
+		PlotString("order_sign5","ZK",Low(),white);
+		BuyToCover(kongpos,open);
+	}
+	
+	
+	//平多仓
+	if  ( ( Low[1]<lips[1]  )){
+		//PlotString("order_sign3","SP",high(),yellow);
+		//Sell(duopos,Open);
+		SetGlobalVar(1,0);
+	}
+	if (duopos>0 and Open<lips){
+		PlotString("order_sign3","SP",high(),yellow);
+		Sell(duopos,Open);
+	}
+	if (duopos>0 and Open>lips and Low<lips){
+		PlotString("order_sign3","SP",high(),yellow);
+		Sell(duopos,lips);
+	}
+	
+	//平空仓
+	if  ((High[1]>lips[1] ) ){
+		SetGlobalVar(2,0);
+    }
+	if (kongpos>0 and open>lips){
+		PlotString("order_sign4","BP",Low(),white);
+		BuyToCover(kongpos,Open);
+	}
+	if (kongpos>0 and open<lips and high>lips)
+	{
+		PlotString("order_sign4","BP",Low(),white);
+		BuyToCover(kongpos,lips);
+	}
+	 
+	 //多仓止损
+	if (( Low[1]<zhisun_duo[1] )){
+		SetGlobalVar(1,0);
+	}
+	if (duopos>0 and( Low<zhisun_duo) and Open>zhisun_duo){
+		PlotString("order_sign5","ZD",high(),yellow);
+		Sell(duopos,zhisun_duo);
+		SetGlobalVar(1,0);
+	}
+	if (duopos>0 and Open<zhisun_duo){
+		PlotString("order_sign5","ZD",high(),yellow);
+		Sell(duopos,Open);
+		SetGlobalVar(1,0);
+	}
+	
+	//空仓止损
+	if  (( High[1]>zhisun_kong[1] )){
+		SetGlobalVar(2,0);
+	} 
+	if (kongpos>0 and( High>zhisun_kong ) and open <zhisun_kong){
+		PlotString("order_sign5","ZK",Low(),white);
+		BuyToCover(kongpos,zhisun_kong);
+		SetGlobalVar(2,0);
+	}
+	if (kongpos>0 and open > zhisun_kong){
+		PlotString("order_sign5","ZK",Low(),white);
+		BuyToCover(kongpos,open);
+		SetGlobalVar(2,0);
+	}
+	
+	
+End
+	
+
+
+
+
+//------------------------------------------------------------------------
+// 编译版本	GS2010.12.08
+// 用户版本	2015-10-27 16:17:55
+// 版权所有	yangyuxie
+// 更改声明	TradeBlazer Software保留对TradeBlazer平台
+//			每一版本的TrabeBlazer公式修改和重写的权利
+//------------------------------------------------------------------------
