@@ -19,9 +19,10 @@ HeiMoShui      = "k"
 HongMoShui     = "r"
 QianBi         = "b"
 
-RED_LINE       = "r"
-BLACK_LINE     = "b"
+RED_LINE       = "r"           # 上升趋势以及自然回调后的线
+BLACK_LINE     = "b"           # 下降趋势以及自然回升形成的线
 
+TimeWindow     =  4 		   # 保留最近4个关键点
 #b---blue   c---cyan  g---green    k----black
 #m---magenta r---red  w---white    y----yellow
 #plt.plot(y, 'cx--', y+1, 'mo:', y+2, 'kp-.');  
@@ -42,7 +43,7 @@ def main(param1 = 6  , param2 = 3):
 	data = MongoClient.getBetweenClose("VnTrader_1Min_Db","hc1710",'2017-06-01','2017-08-24')
 	big_condition = ShangShenQuShi
 	point_color   = "k"
-	if data[1][1] > data[0][1]:
+	if data[1][1] < data[0][1]:
 		big_condition = XiaJiangQushi 
 		point_color   = "r"
 	Kline_point_arr.append( (data[0][0] ,  data[0][1], big_condition , 'r'))
