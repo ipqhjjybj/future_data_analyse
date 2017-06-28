@@ -38,54 +38,20 @@ class AlligatorStrategy(CtaTemplate):
     className = 'AlligatorStrategy'
     author = u'ipqhjjybj'
 
+
+    # 策略变量数组
+    zui = np.zeros(bufferSize)  # 记录各个阶段的嘴
+
     # 策略参数
-    bzjl          = 0.09		# 保证金比例
-    chengshu      = 10			# 乘数
-    trailingPrcnt = 0.8         # 移动止损
-    initDays      = 10          # 初始化数据所用的天数
-    fixedSize     = 1           # 每次交易的数量
+    CF = 5                      # 唇线周期
+    CM = 5                      # 齿线周期
+    CS = 13                     # 鄂线周期
+    d_CF = 3                    # 唇线平移
+    d_CM = 5                    # 齿线平移
+    d_CS = 8                    # 鄂线平移
 
-    #鳄鱼线指标参数
-    CF			  = 5			# 唇线周期
-    CM            = 8			# 齿线周期
-    CS            = 13          # 鄂线周期 
-    d_CF          = 3           # 唇线平移
-    d_CM          = 5 			# 齿线平移
-    d_CS          = 8           # 鄂线平移
+    lots = 1                    # 开仓手数
 
-    #箱体参数
-    N             = 23          #
-    xianglv       = 1           # 
-    
-    #止损参数     
-    zhisunl_duo1  = 2           # 多仓止损率
-    zhisunl_kong1 = 2           # 空仓止损率
-
-    #波动参数
-    std_up        = 2           # 
-    std_low       = 2           #
-    length        = 15          #
-
-    dd            = 10 
-
-    lips          = 0           # 唇线
-    teeth         = 0           # 齿线
-    croco         = 0           # 鄂线
-    lips_N        = 0           # 平移前唇线
-    teeth_N       = 0           # 平移前齿线
-    croco_N       = 0           # 平移前鳄线
-    zui           = 0           # 嘴张开情况，默认为闭上
-
-    xianghigh     = 100000000   # 箱体上界
-    xianglow      = -10000000   # 箱体下界
-    xiang         = 0           # 箱体情况，默认在箱体
-    xianghigh1    = 0           #
-    xianglow1     = 0           #
-
-    zhisun_duo    =-10000000    # 多仓止损价
-    zhisun_kong   =100000000    # 空仓止损价
-
-    zhisunl_duo   =
     # 策略变量
     bar = None                  # 1分钟K线对象
     barMinute = EMPTY_STRING    # K线当前的分钟
@@ -93,6 +59,8 @@ class AlligatorStrategy(CtaTemplate):
 
     bufferSize = 100                    # 需要缓存的数据的大小
     bufferCount = 0                     # 目前已经缓存了的数据的计数
+
+    openArray = np.zeros(bufferSize)    # K线开盘价的数组
     highArray = np.zeros(bufferSize)    # K线最高价的数组
     lowArray = np.zeros(bufferSize)     # K线最低价的数组
     closeArray = np.zeros(bufferSize)   # K线收盘价的数组
@@ -233,10 +201,12 @@ class AlligatorStrategy(CtaTemplate):
         self.orderList = []
     
         # 保存K线数据
+        self.openArray[0:self.bufferSize-1] = self.openArray[1:self.bufferSize]
         self.closeArray[0:self.bufferSize-1] = self.closeArray[1:self.bufferSize]
         self.highArray[0:self.bufferSize-1] = self.highArray[1:self.bufferSize]
         self.lowArray[0:self.bufferSize-1] = self.lowArray[1:self.bufferSize]
-    
+
+        self.openArray[-1] = bar.open
         self.closeArray[-1] = bar.close
         self.highArray[-1] = bar.high
         self.lowArray[-1] = bar.low
@@ -246,39 +216,83 @@ class AlligatorStrategy(CtaTemplate):
             return
     
         # 计算指标数值
-        self.atrValue = talib.ATR(self.highArray, 
-                                  self.lowArray, 
-                                  self.closeArray,
-                                  self.kkLength)[-1]
-        self.kkMid = talib.MA(self.closeArray, self.kkLength)[-1]
-        self.kkUp = self.kkMid + self.atrValue * self.kkDev
-        self.kkDown = self.kkMid - self.atrValue * self.kkDev
-    
+        # self.atrValue = talib.ATR(self.highArray, 
+        #                           self.lowArray, 
+        #                           self.closeArray,
+        #                           self.kkLength)[-1]
+        # self.kkMid = talib.MA(self.closeArray, self.kkLength)[-1]
+        # self.kkUp = self.kkMid + self.atrValue * self.kkDev
+        # self.kkDown = self.kkMid - self.atrValue * self.kkDev
+        lips_N = talib.MA(self.closeArray, self.CF)
+        teeth_N = talib.MA(self.closeArray,self.CM)
+        croco_N = talib.MA(self.closeArray,self.CS)
+
+        lips = lips_N[-d_CF]                # python 向前平移跟 tb有点差别，平移一个单位，用 -1
+        teeth = teeth_N[-d_CM] 
+        croco = croco_N[-d_CS]
+
+        zui_value =  0                            # 初始化这个值
+        if lips > teeth and teeth > croco:
+            zui_value = 1
+        elif lips < teeth and teeth < croco:
+            zui_value = -1
+        else:
+            zui_value = 0
+
+        self.zui[0:self.bufferSize-1] = self.zui[1:self.bufferSize]
+        self.zui[-1] = zui_value
+
+        cond = 0
+
+        if zui[-2] == 1 and self.closeArray[-2] > self.openArray[-2] and self.lowArray[-2] > self.lips[-2] and self.openArray[-1] > lips:
+            cond = 1
+        if zui[-2] == -1 and self.closeArray[-2] < self.openArray[-2] and self.highArray[-2] < self.lips[-2] and self.openArray[-1] < lips:
+            cond = -1
+
+        if cond > 0:
+            if self.pos == 0:
+                vtOrderID = self.buy(bar.open , self.lots)
+                self.orderList.append(vtOrderID)
+            elif self.pos < 0:
+                vtOrderID = self.cover(bar.open , abs(self.pos))
+                self.orderList.append(vtOrderID)
+                vtOrderID = self.buy(bar.open , self.lots)
+                self.orderList.append(vtOrderID)
+        elif crond < 0:
+            if self.pos == 0:
+                vtOrderID = self.short(bar.open , self.lots)
+                self.orderList.append(vtOrderID)
+            elif self.pos > 0:
+                vtOrderID = self.sell(bar.open , abs(self.pos))
+                self.orderList.append(vtOrderID)
+                vtOrderID = self.short(bar.open , self.lots)
+                self.orderList.append(vtOrderID)
+
         # 判断是否要进行交易
     
         # 当前无仓位，发送OCO开仓委托
-        if self.pos == 0:
-            self.intraTradeHigh = bar.high
-            self.intraTradeLow = bar.low            
-            self.sendOcoOrder(self.kkUp, self.kkDown, self.fixedSize)
+        # if self.pos == 0:
+        #     self.intraTradeHigh = bar.high
+        #     self.intraTradeLow = bar.low            
+        #     self.sendOcoOrder(self.kkUp, self.kkDown, self.fixedSize)
     
-        # 持有多头仓位
-        elif self.pos > 0:
-            self.intraTradeHigh = max(self.intraTradeHigh, bar.high)
-            self.intraTradeLow = bar.low
+        # # 持有多头仓位
+        # elif self.pos > 0:
+        #     self.intraTradeHigh = max(self.intraTradeHigh, bar.high)
+        #     self.intraTradeLow = bar.low
             
-            orderID = self.sell(self.intraTradeHigh*(1-self.trailingPrcnt/100), 
-                                abs(self.pos), True)
-            self.orderList.append(orderID)
+        #     orderID = self.sell(self.intraTradeHigh*(1-self.trailingPrcnt/100), 
+        #                         abs(self.pos), True)
+        #     self.orderList.append(orderID)
     
-        # 持有空头仓位
-        elif self.pos < 0:
-            self.intraTradeHigh = bar.high
-            self.intraTradeLow = min(self.intraTradeLow, bar.low)
+        # # 持有空头仓位
+        # elif self.pos < 0:
+        #     self.intraTradeHigh = bar.high
+        #     self.intraTradeLow = min(self.intraTradeLow, bar.low)
             
-            orderID = self.cover(self.intraTradeLow*(1+self.trailingPrcnt/100),
-                               abs(self.pos), True)
-            self.orderList.append(orderID)
+        #     orderID = self.cover(self.intraTradeLow*(1+self.trailingPrcnt/100),
+        #                        abs(self.pos), True)
+        #     self.orderList.append(orderID)
     
         # 发出状态更新事件
         self.putEvent()        
