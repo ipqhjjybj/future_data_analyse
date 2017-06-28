@@ -225,7 +225,7 @@ class AlligatorStrategy(CtaTemplate):
         for orderID in self.orderList:
             self.cancelOrder(orderID)
         self.orderList = []
-    
+
         # 保存K线数据
         self.openArray[0:self.bufferSize-1] = self.openArray[1:self.bufferSize]
         self.closeArray[0:self.bufferSize-1] = self.closeArray[1:self.bufferSize]
@@ -291,14 +291,14 @@ class AlligatorStrategy(CtaTemplate):
         if self.zui[-2] == 1 and self.closeArray[-2] > self.openArray[-2] and self.lowArray[-2] > lips[-2] and self.openArray[-1] > lips[-1]:
             #cond = 1
             eyu_value = 1
-        if self.eyu[-2] == 1 and self.lowArray[-1] < self.lips[-1]:
+        if self.eyu[-2] == 1 and self.lowArray[-1] < lips[-1]:
             eyu_value = 0
 
         # 空仓信号
         if self.zui[-2] == -1 and self.closeArray[-2] < self.openArray[-2] and self.highArray[-2] < lips[-2] and self.openArray[-1] < lips[-1]:
             #cond = -1
             eyu_value = -1
-        if self.eyu[-2] == -1 and self.highArray[-1] > self.lips[-1]:
+        if self.eyu[-2] == -1 and self.highArray[-1] > lips[-1]:
             eyu_value = -1 
         self.eyu[-1] = eyu_value
 
@@ -337,7 +337,7 @@ class AlligatorStrategy(CtaTemplate):
                 # 发送停止单
                 vtOrderID = self.short(self.kai_down, self.lots, True)
                 self.orderList.append(vtOrderID)
-            self.zhisun_s = self.openArray[-1] * (1 + zhisunlv_l / 1000.0)
+            self.zhisun_s = self.openArray[-1] * (1 + self.zhisunlv_l / 1000.0)
             self.low_since_entry[-1] = self.lowArray[-1]
 
         #########
@@ -427,19 +427,19 @@ class AlligatorStrategy(CtaTemplate):
     #----------------------------------------------------------------------
     def onTrade(self, trade):
         # 多头开仓成交后，撤消空头委托
-        if self.pos > 0:
-            self.cancelOrder(self.shortOrderID)
-            if self.buyOrderID in self.orderList:
-                self.orderList.remove(self.buyOrderID)
-            if self.shortOrderID in self.orderList:
-                self.orderList.remove(self.shortOrderID)
-        # 反之同样
-        elif self.pos < 0:
-            self.cancelOrder(self.buyOrderID)
-            if self.buyOrderID in self.orderList:
-                self.orderList.remove(self.buyOrderID)
-            if self.shortOrderID in self.orderList:
-                self.orderList.remove(self.shortOrderID)
+        # if self.pos > 0:
+        #     self.cancelOrder(self.shortOrderID)
+        #     if self.buyOrderID in self.orderList:
+        #         self.orderList.remove(self.buyOrderID)
+        #     if self.shortOrderID in self.orderList:
+        #         self.orderList.remove(self.shortOrderID)
+        # # 反之同样
+        # elif self.pos < 0:
+        #     self.cancelOrder(self.buyOrderID)
+        #     if self.buyOrderID in self.orderList:
+        #         self.orderList.remove(self.buyOrderID)
+        #     if self.shortOrderID in self.orderList:
+        #         self.orderList.remove(self.shortOrderID)
         
         # 发出状态更新事件
         self.putEvent()
