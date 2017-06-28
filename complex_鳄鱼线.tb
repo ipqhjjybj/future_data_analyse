@@ -1,0 +1,219 @@
+//------------------------------------------------------------------------
+// 简称: eyuxian_new1_huice
+// 名称: 
+// 类别: 公式应用
+// 类型: 用户应用
+// 输出:
+//------------------------------------------------------------------------
+Params
+	//鳄鱼线指标参数
+    Numeric  CF(5);//唇线周期
+    Numeric  CM(8);//齿线周期
+    Numeric  CS(13);//鄂线周期
+    Numeric  d_CF(3);//唇线平移
+    Numeric  d_CM(5);//齿线平移
+    Numeric  d_CS(8);//鄂线平移
+	
+	//开仓手数
+	Numeric	lots(1);
+	
+	//开仓涨跌数
+	Numeric	N_up(10);//达到鳄鱼线开仓条件后再涨跌一定幅度才开仓
+	Numeric	N_down(10);
+	
+	//止损
+	Numeric	zhisunlv_l(10);
+	Numeric zhisunlv_s(10);
+	
+Vars
+	//鳄鱼线变量
+	NumericSeries  lips(0);//唇线
+	NumericSeries  teeth(0);//齿线
+	NumericSeries  croco(0);//鄂线
+	NumericSeries  lips_N(0);//平移前唇线
+	NumericSeries  teeth_N(0);//平移前齿线
+	NumericSeries  croco_N(0);//平移前鄂线
+	NumericSeries  zui(0);//嘴张开情况，默认为闭上
+	
+	//鳄鱼线信号
+	NumericSeries	eyu(0);//鳄鱼线的持仓信号
+	
+	//开仓涨跌线
+	NumericSeries	kai_up(0);
+	NumericSeries	kai_down(0);
+	
+	//止损
+	NumericSeries	zhisun_l(0);
+	NumericSeries	zhisun_s(0);
+	NumericSeries	high_since_entry(0);
+	NumericSeries	low_since_entry(0);
+	NumericSeries	pos(0);
+	
+	
+Begin
+//=================================================================================================================================================================================
+	//鳄鱼线指标
+	lips_N=XAverage(Close,CF);
+	teeth_N=XAverage(Close,CM);
+	croco_N=XAverage(Close,CS);
+	lips=lips_N[d_CF];
+	teeth=teeth_N[d_CM];
+	croco=croco_N[d_CS];
+	PlotNumeric("lips",lips,lips,Green);
+	//Unplot("lips1",1);
+	//PlotString("lips1",Text(Floor(lips,0.1)),lips,green);
+	PlotNumeric("teeth",teeth,teeth,Red);
+	PlotNumeric("croco",croco,croco,Blue);
+	
+	//鳄鱼线嘴张开情况
+	if (lips>teeth and teeth>croco)
+	{
+		zui=1;//嘴向上张开，多头市场
+	}
+	else if (lips<teeth and teeth<croco)
+	{
+		zui=-1;//嘴向下张开，空头市场
+	}
+	else
+	{
+		zui=0;//嘴闭上
+	}
+	//PlotString("zui",Text(zui),high+5,yellow);
+	
+//==================================================================================================================================================================================
+	//鳄鱼线持仓信号
+	//多仓信号
+	if(zui[1]==1 and  Close[1]>Open[1] and Low[1]>lips[1] and Open>lips)
+	{
+		eyu=1;
+	}
+	if (eyu[1]==1 and low<lips )
+	{
+		eyu=0;
+	}
+	//空仓信号
+	if(zui[1]==-1 and  Close[1]<Open[1] and High[1]<lips[1]and Open<lips)
+	{
+		eyu=-1;
+	}
+	if (eyu[1]==-1 and high>lips)
+	{
+		eyu=0;
+	}
+	PlotString("eyu",Text(eyu),high+5,yellow);
+
+	
+//==================================================================================================================================================================================
+	//开仓涨跌线
+	if (eyu[1]==0 and eyu==1)
+	{
+		kai_up=open+N_up*MinMove*PriceScale;
+		//kai_up=close[1]+N_up*MinMove*PriceScale;
+	}
+	if (eyu[1]==0 and eyu==-1)
+	{
+		kai_down=open-N_down*MinMove*PriceScale;
+		//kai_down=close[1]-N_down*MinMove*PriceScale;
+	}
+	PlotNumeric("kai_up",kai_up,kai_up,yellow);
+	PlotNumeric("lai_dowm",kai_down,kai_down,cyan);
+	
+	
+//==================================================================================================================================================================================
+	//进场
+	//开多仓
+	if (eyu>0 and high>kai_up and MarketPosition<1)
+	{
+		if (open>kai_up)
+		{
+			Buy(lots,open);
+			zhisun_l=open*(1-zhisunlv_l/1000);
+		}
+		else
+		{
+			Buy(lots,kai_up);
+			zhisun_l=kai_up*(1-zhisunlv_l/1000);
+		}
+		high_since_entry=high;
+
+	}
+	//开空仓
+	if (eyu<0 and low<kai_down and MarketPosition>-1)
+	{
+		if (open<kai_down)
+		{
+			SellShort(lots,open);
+			zhisun_s=open*(1+zhisunlv_s/1000);
+		}
+		else
+		{
+			SellShort(lots,kai_down);
+			zhisun_s=kai_down*(1+zhisunlv_s/1000);
+		}
+		low_since_entry=low;
+
+	}
+	
+//==================================================================================================================================================================================
+	//止损线
+	pos=MarketPosition;
+	//多仓止损线
+	if (MarketPosition>0 and high>high_since_entry)
+	{
+		high_since_entry=high;
+	}
+	if (pos>0 and pos[1]>0)
+	{
+		zhisun_l=high_since_entry[1]*(1-zhisunlv_l/1000);
+	}
+	//空仓止损线
+	if (MarketPosition<0)
+	{
+		low_since_entry=Min(low_since_entry,low);
+	}
+	if (pos<0 and pos[0]<0)
+	{
+		zhisun_s=low_since_entry[1]*(1+zhisunlv_s/1000);
+	}
+	//PlotNumeric("zsl",zhisun_l,zhisun_l,yellow);
+	//PlotNumeric("zss",zhisun_s,zhisun_s,cyan);
+
+//==================================================================================================================================================================================
+	//移动止损
+	//多仓止损
+	if (MarketPosition>0 and low<zhisun_l and BarsSinceEntry>0) 
+	{	
+		if (open<zhisun_l)
+		{
+			Sell(lots,open);
+		}
+		else
+		{
+			Sell(lots,zhisun_l);
+		}
+		eyu=0;
+	}
+	//空仓止损
+	if (MarketPosition<0 and high>zhisun_s and BarsSinceEntry>0)
+	{
+		if (open >zhisun_s)
+		{
+			BuyToCover(lots,open);
+		}
+		else
+		{
+			BuyToCover(lots,zhisun_s);
+		}
+		eyu=0;
+	}
+
+End
+
+
+//------------------------------------------------------------------------
+// 编译版本	GS2015.12.25
+// 用户版本	2017/06/26 14:01:38
+// 版权所有	htqh71010022
+// 更改声明	TradeBlazer Software保留对TradeBlazer平台
+//			每一版本的TradeBlazer公式修改和重写的权利
+//------------------------------------------------------------------------

@@ -117,14 +117,20 @@ class LiverMoreStrategy():
 		if len(self.number_xjqs) > 0:
 			if y < self.number_xjqs[-1][1]:
 				big_condition = XiaJiangQushi
+		to_drop_line = 0
 		if len(self.number_zrhc) > 0:
 			for i in range(1 , len(self.number_zrhc) + 1):
 				if self.number_zrhc[-i][2] == RED_LINE :
 					if y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
 						big_condition = XiaJiangQushi
+						to_drop_line = 1
 					break
-				# if self.number_zrhc[-i][2] == RED_LINE and y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
-				# 	big_condition = XiaJiangQushi
+					# if self.number_zrhc[-i][2] == RED_LINE and y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
+					# 	big_condition = XiaJiangQushi
+		if 1 == to_drop_line:
+			for i in range(1 , len(self.number_zrhc) + 1):
+				if self.number_zrhc[-i][2] == RED_LINE:
+					self.number_zrhc[-i] = ( self.number_zrhc[-i][0] , self.number_zrhc[-i][1], NoBelowLine)
 		return big_condition
 	'''
 	判断上升趋势
@@ -134,12 +140,19 @@ class LiverMoreStrategy():
 			if y > self.number_ssqs[-1][1]:
 				print "judge ssqs:" + str(y) + "  " + str(self.number_ssqs[-1][0]) + "  " + str(self.number_ssqs[-1][1]) + "  " + str(self.number_ssqs[-1][2]) 
 				big_condition = ShangShenQuShi
+		to_drop_line = 0
 		if len(self.number_zrhs) > 0:
 			for i in range(1 , len(self.number_zrhs) + 1):
 				if self.number_zrhs[-i][2] == BLACK_LINE :
 					if y > self.number_zrhs[-i][1] * ( 1 + param2 / 100.0):
 						big_condition = ShangShenQuShi
+						to_drop_line = 1
 					break
+		if 1 == to_drop_line:
+			for i in range(1 , len(self.number_zrhs) + 1):
+				if self.number_zrhs[-i][2] == BLACK_LINE:
+					self.number_zrhs[-i] = (self.number_zrhs[-i][0] , self.number_zrhs[-i][1] , NoBelowLine) 
+					#self.number_zrhs[-i][2] = NoBelowLine
 		return big_condition
 	'''
 	获得新的K线
@@ -340,7 +353,7 @@ class LiverMoreStrategy():
 
 def test():
 	#data = Future.getOneInstrumentDayBetween('RB88','2013-12-01','2016-07-31') # '2015-01-01','2016-06-23',,2013-06-01','2015-01-01 , '2016-06-23','2017-12-31'
-	#data = Future.getOneInstrumentDayBetween('JM88','2011-01-01','2013-12-31') 
+	data = Future.getOneInstrumentDayBetween('SR88','2014-01-01','2016-12-31') 
 	#data = Future.getOneInstrumentDayBetween('JM88','2013-01-01','2015-12-31') 
 	#data = Future.getOneInstrumentDayBetween('JM88','2014-01-01','2016-12-31') 
 	
