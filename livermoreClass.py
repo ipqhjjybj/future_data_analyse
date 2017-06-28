@@ -203,18 +203,19 @@ class LiverMoreStrategy():
 					self.keyPointArr.append( (pl_x , pl_y , BLACK_LINE))
 					self.number_zrhs[-1] = (self.number_zrhs[-1][0] , self.number_zrhs[-1][1] , BLACK_LINE)
 					#开启下一个状态
+					# 自然回升转自然回撤
 					big_condition = ZiRanHuiChe
 					start_point = (x,y)
-					# 自然回升转自然回撤
-					# 自然回升转下降趋势
-					# 当前点小于下降趋势的最后一个点 或 小于带红线的自然回撤最后一个点
-					big_condition = self.judge_xjqs(big_condition , y , param2)
 					# 自然回升转次级回撤
 					# 当前价格 > 自然回撤的最后一个价格时，为次级回撤
 					if len(self.number_zrhc) > 0 and y > self.number_zrhc[-1][1]:
 						big_condition = CiJiHuiChe
 					if len(self.number_zrhc) == 0:
 						big_condition = ZiRanHuiChe
+					# 自然回升转下降趋势
+					# 当前点小于下降趋势的最后一个点 或 小于带红线的自然回撤最后一个点
+					big_condition = self.judge_xjqs(big_condition , y , param2)
+					
 					self.addToNumberFigure(x, y , big_condition)
 			elif big_condition == CiJiHuiShen:
 				print "t3:" + CiJiHuiShen 

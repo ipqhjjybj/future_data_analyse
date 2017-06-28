@@ -256,18 +256,10 @@ class LivermoreStrategy(CtaTemplate):
         if len(self.number_xjqs) > 0:
             if y < self.number_xjqs[-1][1]:
                 big_condition = XiaJiangQushi
-        to_drop_line = 0
         if len(self.number_zrhc) > 0:
             for i in range(1 , len(self.number_zrhc) + 1):
-                if self.number_zrhc[-i][2] == RED_LINE :
-                    if y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
-                        big_condition = XiaJiangQushi
-                        to_drop_line = 1
-                    break
-        if 1 == to_drop_line:
-            for i in range(1 , len(self.number_zrhc) + 1):
-                if self.number_zrhc[-i][2] == RED_LINE:
-                    self.number_zrhc[-i] = ( self.number_zrhc[-i][0] , self.number_zrhc[-i][1], NoBelowLine)
+                if self.number_zrhc[-i][2] == RED_LINE and y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
+                    big_condition = XiaJiangQushi
         return big_condition
     '''
     判断上升趋势
@@ -277,19 +269,10 @@ class LivermoreStrategy(CtaTemplate):
             if y > self.number_ssqs[-1][1]:
                 print "judge ssqs:" + str(y) + "  " + str(self.number_ssqs[-1][0]) + "  " + str(self.number_ssqs[-1][1]) + "  " + str(self.number_ssqs[-1][2]) 
                 big_condition = ShangShenQuShi
-        to_drop_line = 0
         if len(self.number_zrhs) > 0:
             for i in range(1 , len(self.number_zrhs) + 1):
-                if self.number_zrhs[-i][2] == BLACK_LINE :
-                    if y > self.number_zrhs[-i][1] * ( 1 + param2 / 100.0):
-                        big_condition = ShangShenQuShi
-                        to_drop_line = 1
-                    break
-        if 1 == to_drop_line:
-            for i in range(1 , len(self.number_zrhs) + 1):
-                if self.number_zrhs[-i][2] == BLACK_LINE:
-                    self.number_zrhs[-i] = (self.number_zrhs[-i][0] , self.number_zrhs[-i][1] , NoBelowLine) 
-                    #self.number_zrhs[-i][2] = NoBelowLine
+                if self.number_zrhs[-i][2] == BLACK_LINE and y > self.number_zrhs[-i][1] * ( 1 + param2 / 100.0):
+                    big_condition = ShangShenQuShi
         return big_condition
 
     # livermore 策略 核心判断函数
@@ -321,18 +304,18 @@ class LivermoreStrategy(CtaTemplate):
                 self.keyPointArr.append( (pl_x , pl_y , BLACK_LINE))
                 self.number_zrhs[-1] = (self.number_zrhs[-1][0] , self.number_zrhs[-1][1] , BLACK_LINE)
                 #开启下一个状态
-                # 自然回升转自然回撤
                 self.big_condition = ZiRanHuiChe
                 self.start_point = (x,y)
+                # 自然回升转自然回撤
+                # 自然回升转下降趋势
+                # 当前点小于下降趋势的最后一个点 或 小于带红线的自然回撤最后一个点
+                self.big_condition = self.judge_xjqs(self.big_condition , y , self.param2)
                 # 自然回升转次级回撤
                 # 当前价格 > 自然回撤的最后一个价格时，为次级回撤
                 if len(self.number_zrhc) > 0 and y > self.number_zrhc[-1][1]:
                     self.big_condition = CiJiHuiChe
                 if len(self.number_zrhc) == 0:
                     self.big_condition = ZiRanHuiChe
-                # 自然回升转下降趋势
-                # 当前点小于下降趋势的最后一个点 或 小于带红线的自然回撤最后一个点
-                self.big_condition = self.judge_xjqs(self.big_condition , y , self.param2)
                 self.addToNumberFigure(x, y , self.big_condition)
         elif self.big_condition == CiJiHuiShen:
             if y > pl_y:
