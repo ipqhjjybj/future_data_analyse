@@ -39,8 +39,7 @@ class AlligatorStrategy(CtaTemplate):
     author = u'ipqhjjybj'
 
 
-    # 策略变量数组
-    zui = np.zeros(bufferSize)  # 记录各个阶段的嘴
+    
 
     # 策略参数
     CF = 5                      # 唇线周期
@@ -59,11 +58,15 @@ class AlligatorStrategy(CtaTemplate):
 
     bufferSize = 100                    # 需要缓存的数据的大小
     bufferCount = 0                     # 目前已经缓存了的数据的计数
+    initDays =  14                      # 初始化数据的时间
 
     openArray = np.zeros(bufferSize)    # K线开盘价的数组
     highArray = np.zeros(bufferSize)    # K线最高价的数组
     lowArray = np.zeros(bufferSize)     # K线最低价的数组
     closeArray = np.zeros(bufferSize)   # K线收盘价的数组
+
+    # 策略变量数组
+    zui = np.zeros(bufferSize)          # 记录各个阶段的嘴
     
 
     buyOrderID = None                   # OCO委托买入开仓的委托号
@@ -90,7 +93,7 @@ class AlligatorStrategy(CtaTemplate):
     #----------------------------------------------------------------------
     def __init__(self, ctaEngine, setting):
         """Constructor"""
-        super(KkStrategy, self).__init__(ctaEngine, setting)
+        super(AlligatorStrategy, self).__init__(ctaEngine, setting)
         
     #----------------------------------------------------------------------
     def onInit(self):
@@ -227,14 +230,14 @@ class AlligatorStrategy(CtaTemplate):
         teeth_N = talib.MA(self.closeArray,self.CM)
         croco_N = talib.MA(self.closeArray,self.CS)
 
-        lips = lips_N[-d_CF]                # python 向前平移跟 tb有点差别，平移一个单位，用 -1
-        teeth = teeth_N[-d_CM] 
-        croco = croco_N[-d_CS]
+        lips = lips_N[0:-self.d_CF]                # python 向前平移跟 tb有点差别，平移一个单位，用 -1
+        teeth = teeth_N[0:-self.d_CM] 
+        croco = croco_N[0:-self.d_CS]
 
         zui_value =  0                            # 初始化这个值
-        if lips > teeth and teeth > croco:
+        if lips[-1] > teeth[-1] and teeth[-1] > croco[-1]:
             zui_value = 1
-        elif lips < teeth and teeth < croco:
+        elif lips[-1] < teeth[-1] and teeth[-1] < croco[-1]:
             zui_value = -1
         else:
             zui_value = 0
@@ -244,9 +247,9 @@ class AlligatorStrategy(CtaTemplate):
 
         cond = 0
 
-        if zui[-2] == 1 and self.closeArray[-2] > self.openArray[-2] and self.lowArray[-2] > self.lips[-2] and self.openArray[-1] > lips:
+        if self.zui[-2] == 1 and self.closeArray[-2] > self.openArray[-2] and self.lowArray[-2] > lips[-2] and self.openArray[-1] > lips[-1]:
             cond = 1
-        if zui[-2] == -1 and self.closeArray[-2] < self.openArray[-2] and self.highArray[-2] < self.lips[-2] and self.openArray[-1] < lips:
+        if self.zui[-2] == -1 and self.closeArray[-2] < self.openArray[-2] and self.highArray[-2] < lips[-2] and self.openArray[-1] < lips[-1]:
             cond = -1
 
         if cond > 0:
@@ -258,7 +261,7 @@ class AlligatorStrategy(CtaTemplate):
                 self.orderList.append(vtOrderID)
                 vtOrderID = self.buy(bar.open , self.lots)
                 self.orderList.append(vtOrderID)
-        elif crond < 0:
+        elif cond < 0:
             if self.pos == 0:
                 vtOrderID = self.short(bar.open , self.lots)
                 self.orderList.append(vtOrderID)
