@@ -24,11 +24,13 @@ from vnpy.trader.app.ctaStrategy.ctaHistoryData import *
 import talib
 import numpy as np
 
+import talib
+import numpy as np
+
 from vnpy.trader.vtObject import VtBarData
 from vnpy.trader.vtConstant import EMPTY_STRING
 from vnpy.trader.app.ctaStrategy.ctaTemplate import CtaTemplate
 
-from vnpy.trader.app import riskManager, ctaStrategy
 from vnpy.trader.app.ctaStrategy.ctaBacktesting import *
 from PyQt4 import QtCore, QtGui
 
@@ -118,6 +120,12 @@ class LivermoreStrategy(CtaTemplate):
         """Constructor"""
         super(LivermoreStrategy, self).__init__(ctaEngine, setting)
 
+        for key in setting.keys():
+            if key == "param1":
+                self.param1 = setting[key]
+            if key == "param2":
+                self.param2 = setting[key]
+        #print setting
     #----------------------------------------------------------------------
     def onInit(self):
         """初始化策略（必须由用户继承实现）"""
@@ -128,6 +136,7 @@ class LivermoreStrategy(CtaTemplate):
         for bar in initData:
             self.onBar(bar)
 
+        print self.param1 , self.param2
         self.keyPointArr   = [] # 存储最重要的几个关键点，  (点位,时间, 线的颜色)的格式
         self.KLinePointArr = [] # [(datetime,Y,"上升趋势",'r')] 存储剩下的趋势点, 上升趋势黑墨水 k--black，下降趋势红墨水 ， 其他栏的点，铅笔
         self.number_ssqs   = [] # 上升趋势
@@ -275,7 +284,7 @@ class LivermoreStrategy(CtaTemplate):
     def judge_ssqs(self , big_condition ,  y , param2):
         if len(self.number_ssqs) > 0:
             if y > self.number_ssqs[-1][1]:
-                print "judge ssqs:" + str(y) + "  " + str(self.number_ssqs[-1][0]) + "  " + str(self.number_ssqs[-1][1]) + "  " + str(self.number_ssqs[-1][2]) 
+                #print "judge ssqs:" + str(y) + "  " + str(self.number_ssqs[-1][0]) + "  " + str(self.number_ssqs[-1][1]) + "  " + str(self.number_ssqs[-1][2]) 
                 big_condition = ShangShenQuShi
         to_drop_line = 0
         if len(self.number_zrhs) > 0:
@@ -389,7 +398,7 @@ class LivermoreStrategy(CtaTemplate):
                 # 判断是否是次级回升
                 if len(self.number_zrhs) > 0 and y < self.number_zrhs[-1][1]:
                     self.big_condition = CiJiHuiShen
-                    print self.number_zrhs
+                    #print self.number_zrhs
                 if len(self.number_zrhs) == 0:
                     self.big_condition = ZiRanHuiShen
                     # 判断是否是上升趋势 , 
@@ -429,7 +438,7 @@ class LivermoreStrategy(CtaTemplate):
             self.cancelOrder(orderID)
         self.orderList = []
 
-        print bar.close , bar.datetime
+        #print bar.close , bar.datetime
         # 保存K线数据
         self.closeArray[0:self.bufferSize-1] = self.closeArray[1:self.bufferSize]
         self.closeArray[-1] = bar.close
@@ -483,7 +492,7 @@ class LivermoreStrategy(CtaTemplate):
         buy_cond  = 0
         sell_cond = 0
 
-        print buy_cond , sell_cond
+        #print buy_cond , sell_cond
 
         if self.big_condition == ShangShenQuShi:
             buy_cond = 1
