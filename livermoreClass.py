@@ -317,13 +317,13 @@ class LiverMoreStrategy():
 		yy = []
 		for (x,y) in self.cp_data:
 			xx.append(x)
-			yy.append(y+800)
+			yy.append(y+150)
 		plt.scatter(xx , yy) 
 		xx = []
 		yy = []
 		for (x , y) in self.ori_data:
 			xx.append(x)
-			yy.append(y-800)
+			yy.append(y-150)
 		#print y
 		plt.plot(xx , yy) 
 		#print self.KLinePointArr
@@ -353,7 +353,7 @@ class LiverMoreStrategy():
 
 def test():
 	#data = Future.getOneInstrumentDayBetween('RB88','2013-12-01','2016-07-31') # '2015-01-01','2016-06-23',,2013-06-01','2015-01-01 , '2016-06-23','2017-12-31'
-	data = Future.getOneInstrumentDayBetween('SR88','2014-01-01','2016-12-31') 
+	data = Future.getOneInstrumentDayBetween('AU88','2012-01-01','2016-12-31') 
 	#data = Future.getOneInstrumentDayBetween('JM88','2013-01-01','2015-12-31') 
 	#data = Future.getOneInstrumentDayBetween('JM88','2014-01-01','2016-12-31') 
 	
@@ -363,8 +363,10 @@ def test():
 	#print data[:3]
 	st = LiverMoreStrategy( testData = data)
 
-	st.getPreLine(param1 = 6 , param2 = 3)
-	st.getNewKline(param1 = 6 , param2 = 3)
+	# st.getPreLine(param1 = 6 , param2 = 3)
+	# st.getNewKline(param1 = 6 , param2 = 3)
+	st.getPreLine(param1 = 3 , param2 = 1.5)
+	st.getNewKline(param1 = 3 , param2 = 1.5)
 	st.plotFigure()
 
 if __name__ == '__main__':
