@@ -1,0 +1,70 @@
+//------------------------------------------------------------------------
+// 简称: eyuxian_new1_huice
+// 名称: 
+// 类别: 公式应用
+// 类型: 用户应用
+// 输出:
+//------------------------------------------------------------------------
+Params
+    //鳄鱼线指标参数
+    Numeric  CF(5);//唇线周期
+    Numeric  CM(8);//齿线周期
+    Numeric  CS(13);//鄂线周期
+    Numeric  d_CF(3);//唇线平移
+    Numeric  d_CM(5);//齿线平移
+    Numeric  d_CS(8);//鄂线平移
+	
+    //开仓手数
+    Numeric  lots(1);
+Vars
+	//鳄鱼线变量
+	NumericSeries  lips(0);//唇线
+	NumericSeries  teeth(0);//齿线
+	NumericSeries  croco(0);//鄂线
+	NumericSeries  lips_N(0);//平移前唇线
+	NumericSeries  teeth_N(0);//平移前齿线
+	NumericSeries  croco_N(0);//平移前鄂线
+	NumericSeries  zui(0);//嘴张开情况，默认为闭上
+	
+
+	
+	
+Begin
+//=================================================================================================================================================================================
+	//鳄鱼线指标
+	lips_N=XAverage(Close,CF);
+	teeth_N=XAverage(Close,CM);
+	croco_N=XAverage(Close,CS);
+	lips=lips_N[d_CF];
+	teeth=teeth_N[d_CM];
+	croco=croco_N[d_CS];
+	PlotNumeric("lips",lips,lips,Green);
+	//Unplot("lips1",1);
+	//PlotString("lips1",Text(Floor(lips,0.1)),lips,green);
+	PlotNumeric("teeth",teeth,teeth,Red);
+	PlotNumeric("croco",croco,croco,Blue);
+	
+	//鳄鱼线嘴张开情况
+	if (lips>teeth and teeth>croco)
+	{
+		zui=1;//嘴向上张开，多头市场
+	}
+	else if (lips<teeth and teeth<croco)
+	{
+		zui=-1;//嘴向下张开，空头市场
+	}
+	else
+	{
+		zui=0;//嘴闭上
+	}
+
+//开多仓
+if(zui[1]==1 and  Close[1]>Open[1] and Low[1]>lips[1] and Open>lips)
+{
+	buy(lots,open);
+}
+//开空仓
+if(zui[1]==-1 and  Close[1]<Open[1] and High[1]<lips[1]and Open<lips)
+{
+	sellshort(lots,open);
+}

@@ -119,8 +119,12 @@ class LiverMoreStrategy():
 				big_condition = XiaJiangQushi
 		if len(self.number_zrhc) > 0:
 			for i in range(1 , len(self.number_zrhc) + 1):
-				if self.number_zrhc[-i][2] == RED_LINE and y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
-					big_condition = XiaJiangQushi
+				if self.number_zrhc[-i][2] == RED_LINE :
+					if y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
+						big_condition = XiaJiangQushi
+					break
+				# if self.number_zrhc[-i][2] == RED_LINE and y < self.number_zrhc[-i][1] * ( 1 - param2 / 100.0):
+				# 	big_condition = XiaJiangQushi
 		return big_condition
 	'''
 	判断上升趋势
@@ -132,8 +136,10 @@ class LiverMoreStrategy():
 				big_condition = ShangShenQuShi
 		if len(self.number_zrhs) > 0:
 			for i in range(1 , len(self.number_zrhs) + 1):
-				if self.number_zrhs[-i][2] == BLACK_LINE and y > self.number_zrhs[-i][1] * ( 1 + param2 / 100.0):
-					big_condition = ShangShenQuShi
+				if self.number_zrhs[-i][2] == BLACK_LINE :
+					if y > self.number_zrhs[-i][1] * ( 1 + param2 / 100.0):
+						big_condition = ShangShenQuShi
+					break
 		return big_condition
 	'''
 	获得新的K线
@@ -298,13 +304,13 @@ class LiverMoreStrategy():
 		yy = []
 		for (x,y) in self.cp_data:
 			xx.append(x)
-			yy.append(y+1000)
+			yy.append(y+800)
 		plt.scatter(xx , yy) 
 		xx = []
 		yy = []
 		for (x , y) in self.ori_data:
 			xx.append(x)
-			yy.append(y-1000)
+			yy.append(y-800)
 		#print y
 		plt.plot(xx , yy) 
 		#print self.KLinePointArr
@@ -333,14 +339,19 @@ class LiverMoreStrategy():
 		plt.show()
 
 def test():
-	data = Future.getOneInstrumentDayBetween('RB88','2013-12-01','2016-07-31') # '2015-01-01','2016-06-23',,2013-06-01','2015-01-01 , '2016-06-23','2017-12-31'
+	#data = Future.getOneInstrumentDayBetween('RB88','2013-12-01','2016-07-31') # '2015-01-01','2016-06-23',,2013-06-01','2015-01-01 , '2016-06-23','2017-12-31'
+	#data = Future.getOneInstrumentDayBetween('JM88','2011-01-01','2013-12-31') 
+	#data = Future.getOneInstrumentDayBetween('JM88','2013-01-01','2015-12-31') 
+	#data = Future.getOneInstrumentDayBetween('JM88','2014-01-01','2016-12-31') 
+	
+
 	data = [ (datetime.datetime.strptime(x[0], '%Y-%m-%d'), x[5]) for x in data]
 
 	#print data[:3]
 	st = LiverMoreStrategy( testData = data)
 
-	st.getPreLine(param1 = 6 , param2 = 1.5)
-	st.getNewKline(param1 = 6 , param2 = 1.5)
+	st.getPreLine(param1 = 6 , param2 = 3)
+	st.getNewKline(param1 = 6 , param2 = 3)
 	st.plotFigure()
 
 if __name__ == '__main__':
