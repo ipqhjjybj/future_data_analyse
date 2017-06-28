@@ -473,7 +473,17 @@ class LivermoreStrategy(CtaTemplate):
             if sell_cond == 1:
                 orderID = self.short(bar.close , self.fixedSize)
                 self.orderList.append(orderID)
+
+        if self.pos < 0:
+            if sell_cond == 0:
+                orderID = self.cover(bar.close , abs(self.pos))
+                self.orderList.append(orderID)
+            if buy_cond == 1:
+                orderID = self.buy(bar.close , self.fixedSize)
+                self.orderList.append(orderID)
             
+
+
         # 当前无仓位，发送OCO开仓委托
         # if self.pos == 0:
         #     self.intraTradeHigh = bar.high
@@ -567,7 +577,7 @@ if __name__ == '__main__':
     engine.setPriceTick(0.2)    # 股指最小价格变动       
     
     # 设置使用的历史数据库
-    engine.setDatabase(MINUTE_DB_NAME, 'IF0000')
+    engine.setDatabase(MINUTE_DB_NAME, 'rb888')
     
     # 在引擎中创建策略对象
     d = {}
