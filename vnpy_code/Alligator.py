@@ -257,9 +257,11 @@ class AlligatorStrategy(CtaTemplate):
         teeth = teeth_N[0:-self.d_CM] 
         croco = croco_N[0:-self.d_CS]
 
+        # 是否是今天进程的,
         isEntryToday = 1
         if self.pos > 0 or self.pos < 0:
             isEntryToday = 0
+
         ## 嘴张开情况
         zui_value =  0                            # 初始化这个值
         if lips[-1] > teeth[-1] and teeth[-1] > croco[-1]:
@@ -282,74 +284,81 @@ class AlligatorStrategy(CtaTemplate):
         self.low_since_entry[-1] = self.low_since_entry[-2]
 
         self.posArray[0:self.bufferSize-1] = self.posArray[1:self.bufferSize]
+        self.posArray[-2] = self.pos
         self.posArray[-1] = self.posArray[-2]
 
         #cond = 0
-
+        #print lips[-5:]
         eyu_value = self.eyu[-1]
         # 多仓信号
-        if self.zui[-2] == 1 and self.closeArray[-2] > self.openArray[-2] and self.lowArray[-2] > lips[-2] and self.openArray[-1] > lips[-1]:
+        if self.zui[-2] == 1 and self.closeArray[-2] > self.openArray[-2] and self.lowArray[-2] > lips[-2] and bar.open > lips[-1]:
             #cond = 1
             eyu_value = 1
-        if self.eyu[-2] == 1 and self.lowArray[-1] < lips[-1]:
+        if self.eyu[-2] == 1 and bar.low < lips[-1]:
             eyu_value = 0
 
         # 空仓信号
-        if self.zui[-2] == -1 and self.closeArray[-2] < self.openArray[-2] and self.highArray[-2] < lips[-2] and self.openArray[-1] < lips[-1]:
+        if self.zui[-2] == -1 and self.closeArray[-2] < self.openArray[-2] and self.highArray[-2] < lips[-2] and bar.open < lips[-1]:
             #cond = -1
             eyu_value = -1
-        if self.eyu[-2] == -1 and self.highArray[-1] > lips[-1]:
+        if self.eyu[-2] == -1 and bar.high > lips[-1]:
             eyu_value = -1 
         self.eyu[-1] = eyu_value
 
+        print self.eyu[-5:]
+
         ####开仓涨跌线
         if self.eyu[-2] == 0 and self.eyu[-1] == 1:
-            self.kai_up = self.openArray[-1] + self.N_up * self.MinMove * self.PriceScale
+            self.kai_up = bar.open + self.N_up * self.MinMove * self.PriceScale
         if self.eyu[-2] == 0 and self.eyu[-1] == -1:
-            self.kai_down = self.openArray[-1] - self.N_down * self.MinMove * self.PriceScale
+            self.kai_down = bar.open - self.N_down * self.MinMove * self.PriceScale
 
+        print self.kai_up , self.kai_down
         # 开多仓
-        if self.eyu[-1] > 0 and self.highArray[-1] > self.kai_up and self.pos < 1:
+        if self.eyu[-1] > 0 and bar.high > self.kai_up and self.pos < 1:
             #平空单
             if self.pos < 0:
                 vtOrderID = self.cover(bar.open , abs(self.pos))
                 self.orderList.append(vtOrderID)
-
-            if self.openArray[-1] > self.kai_up:
-                vtOrderID = self.buy(bar.open , self.lots)
+            if bar.open > self.kai_up:
+                vtOrderID = self.buy(bar.open, self.lots)
                 self.orderList.append(vtOrderID)
+                self.zhisun_l = bar.open * (1 - self.zhisun_l / 1000.0)
             else:
-                # 发送停止单
-                vtOrderID = self.buy(self.kai_up, self.lots, True)
+                vtOrderID = self.buy(self.kai_up, self.lots)
                 self.orderList.append(vtOrderID)
-            self.zhisun_l = self.openArray[-1] * ( 1 - self.zhisunlv_l / 1000.0)
-            self.high_since_entry[-1] = self.highArray[-1]
+                self.zhisun_l = self.kai_up * (1 - self.zhisun_l / 1000.0)
+
+            self.high_since_entry[-1] = bar.high
 
         if self.eyu[-1] < 0 and self.lowArray[-1] < self.kai_down and self.pos > -1:
             #平多单
             if self.pos > 0:
                 vtOrderID = self.sell(bar.open , abs(self.pos))
+                self.orderList.append(vtOrderID)
 
             if self.openArray[-1] < self.kai_down:
                 vtOrderID = self.short(bar.open , self.lots)
                 self.orderList.append(vtOrderID)
+                self.zhisun_s = bar.open * (1 + self.zhisunlv_s /1000.0)
             else:
                 # 发送停止单
-                vtOrderID = self.short(self.kai_down, self.lots, True)
+                vtOrderID = self.short(self.kai_down, self.lots)
                 self.orderList.append(vtOrderID)
-            self.zhisun_s = self.openArray[-1] * (1 + self.zhisunlv_l / 1000.0)
-            self.low_since_entry[-1] = self.lowArray[-1]
+                self.zhisun_s = self.kai_down * (1 + self.zhisunlv_s /1000.0)
+
+            self.low_since_entry[-1] = bar.low
 
         #########
         #止损线
         #多仓止损
-        if self.pos > 0 and self.highArray[-1] > self.high_since_entry:
-            self.high_since_entry[-1] = self.highArray[-1]
+        if self.pos > 0 and bar.high > self.high_since_entry[-1]:
+            self.high_since_entry[-1] = bar.high
         if self.pos > 0 and self.posArray[-2] > 0:
             self.zhisun_l = self.high_since_entry[-2] * (1 - self.zhisunlv_l/1000)
         #空仓止损
         if self.pos < 0 :
-            self.low_since_entry[-1] = min(self.low_since_entry[-1], self.lowArray[-1])
+            self.low_since_entry[-1] = min(self.low_since_entry[-1], bar.low )
         if self.pos < 0 and self.posArray[-2] < 0:
             self.zhisun_s = self.low_since_entry[-2] * (1 + self.zhisunlv_s /1000)
 
