@@ -28,6 +28,9 @@ from vnpy.trader.vtObject import VtBarData
 from vnpy.trader.vtConstant import EMPTY_STRING
 from vnpy.trader.app.ctaStrategy.ctaTemplate import CtaTemplate
 
+from vnpy.trader.app import riskManager, ctaStrategy
+from vnpy.trader.app.ctaStrategy.ctaBacktesting import *
+from PyQt4 import QtCore, QtGui
 
 ShangShenQuShi = "上升趋势".decode('utf-8')
 ZiRanHuiShen   = "自然回升".decode('utf-8')
@@ -67,7 +70,12 @@ class LivermoreStrategy(CtaTemplate):
 
     bufferSize = 100                    # 需要缓存的数据的大小
     bufferCount = 0                     # 目前已经缓存了的数据的计数
+    initDays = 10                       # 初始化数据所用的天数
+    fixedSize = 1                       # 每次交易的数量
 
+    buyOrderID = None                   # OCO委托买入开仓的委托号
+    shortOrderID = None                 # OCO委托卖出开仓的委托号
+    orderList = []                      # 保存委托代码的列表
 
 
     #highArray = np.zeros(bufferSize)     # K线最高价的数组
@@ -86,8 +94,10 @@ class LivermoreStrategy(CtaTemplate):
     number_zrhc   = []                    # 自然回撤
     number_cjhc   = []                    # 次级回撤
 
-    ori_data      = []                    # 原始的数据  [(datetime , close_price)]
-    #cp_data       = []                    # 用来对照 对照的代码
+    QuJianPairs   = []                    # 区间对
+
+    ori_data      = [(0,0)]* bufferSize   # 原始的数据  [(datetime , close_price)]
+    #cp_data       = []                   # 用来对照 对照的代码
 
     # 参数列表，保存了参数的名称
     paramList = ['name',
@@ -106,7 +116,7 @@ class LivermoreStrategy(CtaTemplate):
     #----------------------------------------------------------------------
     def __init__(self, ctaEngine, setting):
         """Constructor"""
-        super(KkStrategy, self).__init__(ctaEngine, setting)
+        super(LivermoreStrategy, self).__init__(ctaEngine, setting)
 
     #----------------------------------------------------------------------
     def onInit(self):
@@ -267,8 +277,8 @@ class LivermoreStrategy(CtaTemplate):
 
     # livermore 策略 核心判断函数
     def judge(self, t_klinePoint , t_ori_data):
-        (pl_x, pl_y , pl_condition , pl_color) = self.KLinePointArr[-1]
-        (x,y) = self.ori_data[i]
+        (pl_x, pl_y , pl_condition , pl_color) = t_klinePoint
+        (x,y) = t_ori_data
         if self.big_condition == ShangShenQuShi:
             if y > pl_y:
                 self.addToNumberFigure( x , y , self.big_condition) # 上升趋势延续，黑墨水描绘
@@ -369,7 +379,7 @@ class LivermoreStrategy(CtaTemplate):
                 self.big_condition = self.judge_ssqs(self.big_condition ,y ,self.param2)
                 self.addToNumberFigure( x, y , self.big_condition)
         elif self.big_condition == CiJiHuiChe:
-            print "t6:" + self.big_condition
+            #print "t6:" + self.big_condition
             if y < pl_y:
                 ##次级回撤变为自然回撤
                 if len(self.number_zrhc) > 0 and y < self.number_zrhc[-1][1]:
@@ -401,7 +411,8 @@ class LivermoreStrategy(CtaTemplate):
         for orderID in self.orderList:
             self.cancelOrder(orderID)
         self.orderList = []
-    
+
+        print bar.close , bar.datetime
         # 保存K线数据
         self.closeArray[0:self.bufferSize-1] = self.closeArray[1:self.bufferSize]
         self.closeArray[-1] = bar.close
@@ -412,8 +423,9 @@ class LivermoreStrategy(CtaTemplate):
 
         self.ori_data[0:self.bufferSize-1] = self.ori_data[1:self.bufferSize]
         self.ori_data[-1]  =  (bar.datetime , bar.close)
-
+        
         self.bufferCount += 1
+
         if self.bufferCount < self.bufferSize:
             return
     
@@ -442,17 +454,20 @@ class LivermoreStrategy(CtaTemplate):
                 self.big_condition = XiaJiangQushi
                 self.point_color   = HongMoShui
 
-            self.addToNumberFigure( self.ori_data[0][0] , self.ori_data[0][1] , big_condition)
+            self.addToNumberFigure( self.ori_data[0][0] , self.ori_data[0][1] , self.big_condition)
 
             for i in range(1, len(self.ori_data) - 1):
                 self.judge( self.KLinePointArr[-1] , self.ori_data[i])
 
         
-        self.judge(self.KLinePointArr[-1] , self.ori_data[i])
+        self.judge(self.KLinePointArr[-1] , self.ori_data[-1])
         # 判断是否要进行交易
 
         buy_cond  = 0
         sell_cond = 0
+
+        print buy_cond , sell_cond
+
         if self.big_condition == ShangShenQuShi:
             buy_cond = 1
         if self.big_condition == XiaJiangQushi:
@@ -558,8 +573,6 @@ class LivermoreStrategy(CtaTemplate):
 if __name__ == '__main__':
     # 提供直接双击回测的功能
     # 导入PyQt4的包是为了保证matplotlib使用PyQt4而不是PySide，防止初始化出错
-    from ctaBacktesting import *
-    from PyQt4 import QtCore, QtGui
     
     # 创建回测引擎
     engine = BacktestingEngine()
@@ -589,5 +602,3 @@ if __name__ == '__main__':
     # 显示回测结果
     engine.showBacktestingResult()
 
-if __name__ == '__main__':
-    main()
