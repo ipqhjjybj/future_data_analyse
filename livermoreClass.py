@@ -215,7 +215,6 @@ class LiverMoreStrategy():
 					# 自然回升转下降趋势
 					# 当前点小于下降趋势的最后一个点 或 小于带红线的自然回撤最后一个点
 					big_condition = self.judge_xjqs(big_condition , y , param2)
-					
 					self.addToNumberFigure(x, y , big_condition)
 			elif big_condition == CiJiHuiShen:
 				print "t3:" + CiJiHuiShen 
@@ -345,7 +344,7 @@ class LiverMoreStrategy():
 
 		#print self.keyPointArr
 		for (xx,yy,ccolor) in self.keyPointArr:
-			x = [xx - datetime.timedelta(days=15) , xx + datetime.timedelta(days=15)]
+			x = [xx - datetime.timedelta(days=5) , xx + datetime.timedelta(days=5)]
 			y = [yy,yy]
 			#plt.plot(x , y, color = ccolor) 
 			plt.hlines( y[0], x[0], x[1] , colors = ccolor , linestyles = "dashed")
@@ -354,7 +353,7 @@ class LiverMoreStrategy():
 
 def test():
 	#data = Future.getOneInstrumentDayBetween('RB88','2013-12-01','2016-07-31') # '2015-01-01','2016-06-23',,2013-06-01','2015-01-01 , '2016-06-23','2017-12-31'
-	data = Future.getOneInstrumentDayBetween('AU88','2012-01-01','2016-12-31') 
+	data = Future.getOneInstrumentDayBetween('JM88','2016-01-01','2016-12-31') 
 	#data = Future.getOneInstrumentDayBetween('JM88','2013-01-01','2015-12-31') 
 	#data = Future.getOneInstrumentDayBetween('JM88','2014-01-01','2016-12-31') 
 	

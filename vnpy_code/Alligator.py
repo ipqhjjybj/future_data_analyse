@@ -67,8 +67,7 @@ class AlligatorStrategy(CtaTemplate):
     # 止损
     zhisun_l = 0
     zhisun_s = 0
-    high_since_entry = 0
-    low_since_entry = 0 
+    
 
     # 策略变量
     bar = None                  # 1分钟K线对象
@@ -87,7 +86,10 @@ class AlligatorStrategy(CtaTemplate):
     # 策略变量数组
     zui = np.zeros(bufferSize)          # 记录各个阶段的嘴
     eyu = np.zeros(bufferSize)          # 鳄鱼线的持仓信号
-    
+    posArray = np.zeros(bufferSize)     # 持仓数组
+
+    high_since_entry = np.zeros(bufferSize) # 高点entry 
+    low_since_entry = np.zeros(bufferSize)  # 低点entry
     
 
     buyOrderID = None                   # OCO委托买入开仓的委托号
@@ -255,6 +257,9 @@ class AlligatorStrategy(CtaTemplate):
         teeth = teeth_N[0:-self.d_CM] 
         croco = croco_N[0:-self.d_CS]
 
+        isEntryToday = 1
+        if self.pos > 0 or self.pos < 0:
+            isEntryToday = 0
         ## 嘴张开情况
         zui_value =  0                            # 初始化这个值
         if lips[-1] > teeth[-1] and teeth[-1] > croco[-1]:
@@ -269,6 +274,16 @@ class AlligatorStrategy(CtaTemplate):
 
         self.eyu[0:self.bufferSize-1] = self.eyu[1:self.bufferSize]
         self.eyu[-1] = self.eyu[-2]
+
+        self.high_since_entry[0:self.bufferSize-1] = self.high_since_entry[1:self.bufferSize]
+        self.high_since_entry[-1] = self.high_since_entry[-2]
+        
+        self.low_since_entry[0:self.bufferSize-1] = self.low_since_entry[1:self.bufferSize]
+        self.low_since_entry[-1] = self.low_since_entry[-2]
+
+        self.posArray[0:self.bufferSize-1] = self.posArray[1:self.bufferSize]
+        self.posArray[-1] = self.posArray[-2]
+
         #cond = 0
 
         eyu_value = self.eyu[-1]
@@ -308,7 +323,7 @@ class AlligatorStrategy(CtaTemplate):
                 vtOrderID = self.buy(self.kai_up, self.lots, True)
                 self.orderList.append(vtOrderID)
             self.zhisun_l = self.openArray[-1] * ( 1 - self.zhisunlv_l / 1000.0)
-            self.high_since_entry = high
+            self.high_since_entry[-1] = self.highArray[-1]
 
         if self.eyu[-1] < 0 and self.lowArray[-1] < self.kai_down and self.pos > -1:
             #平多单
@@ -323,13 +338,38 @@ class AlligatorStrategy(CtaTemplate):
                 vtOrderID = self.short(self.kai_down, self.lots, True)
                 self.orderList.append(vtOrderID)
             self.zhisun_s = self.openArray[-1] * (1 + zhisunlv_l / 1000.0)
-            self.low_since_entry = self.lowArray[-1]
+            self.low_since_entry[-1] = self.lowArray[-1]
 
         #########
+        #止损线
+        #多仓止损
         if self.pos > 0 and self.highArray[-1] > self.high_since_entry:
-            self.high_since_entry = self.highArray[-1]
+            self.high_since_entry[-1] = self.highArray[-1]
+        if self.pos > 0 and self.posArray[-2] > 0:
+            self.zhisun_l = self.high_since_entry[-2] * (1 - self.zhisunlv_l/1000)
+        #空仓止损
+        if self.pos < 0 :
+            self.low_since_entry[-1] = min(self.low_since_entry[-1], self.lowArray[-1])
+        if self.pos < 0 and self.posArray[-2] < 0:
+            self.zhisun_s = self.low_since_entry[-2] * (1 + self.zhisunlv_s /1000)
 
-        
+        ######
+        # 移动止损
+        if self.pos > 0 and self.lowArray[-1] < self.zhisun_l and isEntryToday == 0:
+            if bar.open < self.zhisun_l:
+                vtOrderID = self.sell(bar.open , abs(self.pos))
+                self.orderList.append(vtOrderID)
+            else:
+                #下停止单
+                vtOrderID = self.sell(self.zhisun_l , abs(self.pos) , True)
+                self.orderList.append(vtOrderID)
+            self.eyu[-1] = 0
+        if self.pos < 0 and bar.high > self.zhisun_s and isEntryToday == 0:
+            if bar.open > self.zhisun_s:
+                self.cover(bar.open , abs(self.pos))
+            else:
+                self.cover(self.zhisun_s , abs(self.pos))
+            self.eyu[-1] = 0
 
         # if cond > 0:
         #     if self.pos == 0:
