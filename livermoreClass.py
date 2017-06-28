@@ -294,7 +294,6 @@ class LiverMoreStrategy():
 	'''
 	def plotFigure(self):
 		print "plotFigure"
-		
 		xx = []
 		yy = []
 		for (x,y) in self.cp_data:
@@ -334,14 +333,14 @@ class LiverMoreStrategy():
 		plt.show()
 
 def test():
-	data = Future.getOneInstrumentDayBetween('RB88','2013-02-01','2016-07-31') # '2015-01-01','2016-06-23',,2013-06-01','2015-01-01 , '2016-06-23','2017-12-31'
+	data = Future.getOneInstrumentDayBetween('RB88','2013-12-01','2016-07-31') # '2015-01-01','2016-06-23',,2013-06-01','2015-01-01 , '2016-06-23','2017-12-31'
 	data = [ (datetime.datetime.strptime(x[0], '%Y-%m-%d'), x[5]) for x in data]
 
 	#print data[:3]
 	st = LiverMoreStrategy( testData = data)
 
-	st.getPreLine(param1 = 6 , param2 = 3)
-	st.getNewKline(param1 = 6 , param2 = 3)
+	st.getPreLine(param1 = 6 , param2 = 1.5)
+	st.getNewKline(param1 = 6 , param2 = 1.5)
 	st.plotFigure()
 
 if __name__ == '__main__':
