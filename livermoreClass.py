@@ -96,7 +96,7 @@ class LiverMoreStrategy():
 		if self.ori_data[1][1] < self.ori_data[0][1]:
 			dirction = -1
 		for i in range(1, len(self.ori_data)):
-			(x,y)   = self.ori_data[i]
+			(x,y,vol)  = self.ori_data[i]
 			(px,py) = self.cp_data[-1]
 			if dirction == 1:
 				if y > py:
@@ -169,9 +169,10 @@ class LiverMoreStrategy():
 		#self.KLinePointArr.append( (self.ori_data[0][0] , self.ori_data[0][1] , big_condition , point_color))
 		self.addToNumberFigure( self.ori_data[0][0] , self.ori_data[0][1] , big_condition)
 
+
 		for i in range(1, len(self.ori_data)):
 			(pl_x,pl_y,pl_condition,pl_color) = self.KLinePointArr[-1]
-			(x,y) = self.ori_data[i]
+			(x,y,volume) = self.ori_data[i]
 			print "big_condition"+big_condition
 			print pl_x.strftime("%Y-%m-%d"),pl_y,pl_condition,pl_color
 			print x.strftime("%Y-%m-%d"),y
@@ -321,7 +322,7 @@ class LiverMoreStrategy():
 		plt.scatter(xx , yy) 
 		xx = []
 		yy = []
-		for (x , y) in self.ori_data:
+		for (x , y , vol) in self.ori_data:
 			xx.append(x)
 			yy.append(y-150)
 		#print y
@@ -348,6 +349,11 @@ class LiverMoreStrategy():
 			y = [yy,yy]
 			#plt.plot(x , y, color = ccolor) 
 			plt.hlines( y[0], x[0], x[1] , colors = ccolor , linestyles = "dashed")
+		#### 画成交量
+		xx = [x[0] for x in self.keyPointArr]
+		x_vol = [x[0] for x in self.ori_data if x[0] in xx]
+		y_vol = [x[2] / 10000.0 for x in self.ori_data if x[0] in x_vol]
+		plt.bar(x_vol , y_vol)
 
 		plt.show()
 
@@ -358,7 +364,7 @@ def test():
 	#data = Future.getOneInstrumentDayBetween('JM88','2014-01-01','2016-12-31') 
 	
 
-	data = [ (datetime.datetime.strptime(x[0], '%Y-%m-%d'), x[5]) for x in data]
+	data = [ (datetime.datetime.strptime(x[0], '%Y-%m-%d'), x[5] , x[6]) for x in data]
 
 	#print data[:3]
 	st = LiverMoreStrategy( testData = data)
