@@ -350,7 +350,8 @@ class LiverMoreStrategy():
 			#plt.plot(x , y, color = ccolor) 
 			plt.hlines( y[0], x[0], x[1] , colors = ccolor , linestyles = "dashed")
 		#### 画成交量
-		xx = [x[0] for x in self.keyPointArr]
+		#xx = [x[0] for x in self.keyPointArr]
+		xx = [x[0] for x in self.ori_data ]
 		x_vol = [x[0] for x in self.ori_data if x[0] in xx]
 		y_vol = [x[2] / 10000.0 for x in self.ori_data if x[0] in x_vol]
 		plt.bar(x_vol , y_vol)
